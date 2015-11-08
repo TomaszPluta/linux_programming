@@ -1,0 +1,88 @@
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <string.h>
+#define BUFLEN 60
+#define PCK_TO_SEND 10
+#define DEFAULT_PORT 56872
+
+
+
+ void error_handler(char *s) {
+     perror(s);
+     _exit(1);
+ }
+
+ int main(int argc, char * argv[]) {
+   struct sockaddr_in adr_serv, adr_cli;
+   int ret;
+   int snd;
+   int serv_socket;
+   int slen = sizeof(adr_cli);
+
+   int send_buff_size;
+   int recv_buff_size;
+   char send_buffer[BUFLEN];
+   char recv_buffer[BUFLEN];
+   send_buff_size = sizeof(send_buffer);
+   recv_buff_size = sizeof(send_buffer);
+   int port = DEFAULT_PORT;
+
+   if (argv[1] != NULL){
+ 	   int port_val = atoi(argv[1]);
+    	   if ((port_val) > 0 &&  port_val < 65536){
+    		   port = port_val;
+    		   printf("Pomyślnie ustawiono port: %d\n", port);
+    	   }
+    	   else {
+    		   printf("Port poza zakresem, wybrano domyślny: %d\n", port);
+    	   }
+    }
+
+
+
+   serv_socket = socket(PF_INET, SOCK_DGRAM,0);
+   if(serv_socket < 0){
+	   error_handler("socket");
+   }
+   printf("Gniazdo: %d\n", serv_socket);
+
+   memset((char *) &adr_serv, 0, sizeof(adr_serv));
+   adr_serv.sin_family = AF_INET;
+   adr_serv.sin_port = port;
+   adr_serv.sin_addr.s_addr = htonl(INADDR_ANY);
+   printf("Port nr: %d\n", adr_serv.sin_port);
+   printf("Adres ip: %d\n", adr_serv.sin_addr.s_addr);
+   ret = bind(serv_socket,(struct sockaddr *) &adr_serv, sizeof(adr_serv));
+   if (ret == -1){
+	   error_handler("bind");
+   }
+
+
+   int i;
+   for (i=0; i<PCK_TO_SEND; i++) {
+	   ret = recvfrom(serv_socket, &recv_buffer, recv_buff_size, 0,(struct sockaddr *) &adr_cli, &slen);
+      if(ret < 0){
+    	  error_handler("recvfrom()");
+      }
+
+      printf("adres IP nadawcy:  %s\n",  inet_ntoa(adr_cli.sin_addr));
+      printf("port: %d\n", ntohs(adr_cli.sin_port));
+      printf("tresc: %s\n\n", recv_buffer);
+
+
+      sprintf(send_buffer,"Tu serwer, odebralem wiadomosc: %d",i);
+      snd = sendto(serv_socket, &send_buffer, send_buff_size, 0,(struct sockaddr *) &adr_cli, slen);
+      if(snd < 0){
+    	  error_handler("sendto()");
+      }
+      printf("wyslano odpowiedz \n\n");
+   }
+
+   close(serv_socket);
+   return 0;
+}
+

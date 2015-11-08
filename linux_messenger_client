@@ -1,0 +1,93 @@
+ #include <arpa/inet.h>
+ #include <netinet/in.h>
+ #include <stdio.h>
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <unistd.h>
+ #include <string.h>
+ #define BUFLEN 80
+ #define PCKT_TO_SEND 1
+ #define DEFAULT_PORT 56872
+ #define DEFAUL_SERV_IP "127.0.0.1"
+
+
+
+void error_handler(char *s) {
+     perror(s);
+     _exit(1);
+   }
+
+int main(int argc, char * argv[]) {
+   struct sockaddr_in serv_adr;
+   int cli_socket;
+   int serv_adr_size;
+   int send;
+   int recv;
+   int port = DEFAULT_PORT;
+   char* serv_ip = DEFAUL_SERV_IP;
+
+   int send_buff_size;
+   int recv_buff_size;
+   char send_buffer[BUFLEN] = "hello from client";
+   char recv_buffer[BUFLEN];
+   send_buff_size = sizeof(send_buffer);
+   recv_buff_size = sizeof(send_buffer);
+
+
+   if (argv[1] != NULL){
+	   int port_val = atoi(argv[1]);
+   	   if ((port_val) > 1024 &&  port_val < 65536){
+   		   port = port_val;
+   		   printf("Pomyślnie ustawiono port: %d\n", port);
+   	   }
+   	   else {
+   		   printf("Port poza zakresem, wybrano domyślny: %d\n", port);
+   	   }
+   }
+
+   if (argv[2] != NULL){
+	   serv_ip = (argv[2]);
+   }
+
+   if (argv[3] != NULL){
+	   strncpy(send_buffer, argv[3], BUFLEN);
+   }
+
+   serv_adr_size = sizeof(serv_adr);
+   cli_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+   if(socket < 0){
+	   error_handler("socket");
+	   printf("ustawiono ip  %s\n",  inet_ntoa(serv_adr.sin_addr));
+   }
+
+
+   memset((char *) &serv_adr, 0, sizeof(serv_adr));
+   serv_adr.sin_family = AF_INET;
+   serv_adr.sin_port = port;
+   inet_aton(serv_ip, &serv_adr.sin_addr);
+
+   printf("Gniazdo nr %d\n", cli_socket);
+   printf("Port  nr %d\n", serv_adr.sin_port);
+   printf("adres IP servera:  %s\n",  inet_ntoa(serv_adr.sin_addr));
+
+   int i;
+   for (i=0; i<PCKT_TO_SEND; i++) {
+      send = sendto(cli_socket, &send_buffer, send_buff_size, 0, (struct sockaddr *)&serv_adr, (socklen_t)serv_adr_size);
+      if(send < 0){
+    	  error_handler("sendto()");
+      }
+      printf("Wyslano komunikat: %s\n", send_buffer);
+
+      printf("Czekam na odpowiedz...\n");
+      recv = recvfrom(cli_socket, &recv_buffer, recv_buff_size, 0, (struct sockaddr *)&serv_adr, (socklen_t *) &serv_adr_size);
+      if(recv < 0) {
+    	  error_handler("recvfrom()");
+      }
+
+      printf("Otrzymana odpowiedz: %s\n", recv_buffer);
+      sleep(1);
+   }
+   close(cli_socket);
+   return 0;
+}
+
