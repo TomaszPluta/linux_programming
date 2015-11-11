@@ -48,6 +48,8 @@ int main(int argc, char * argv[]) {
    printf("Port  nr %d\n", serv_adr.sin_port);
    printf("adres IP klienta:  %s\n",  inet_ntoa(serv_adr.sin_addr));
 
+   bind(cli_socket,(struct sockaddr *) &serv_adr, sizeof(serv_adr));
+
    int i;
    for (i=0; i<PCKT_TO_SEND; i++) {
       sprintf(send_buffer, "Hello from client nr  %d", i);
